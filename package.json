@@ -1,0 +1,19 @@
+{
+  "name": "businesslab",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=24.18.0"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @businesslab/web dev",
+    "build:web": "pnpm --filter @businesslab/web build",
+    "start:web": "pnpm --filter @businesslab/web start",
+    "lint:web": "pnpm --filter @businesslab/web lint",
+    "typecheck:web": "pnpm --filter @businesslab/web typecheck",
+    "test:api": "./gradlew :apps:api:test",
+    "build:api": "./gradlew :apps:api:build",
+    "run:api": "./gradlew :apps:api:bootRun"
+  }
+}

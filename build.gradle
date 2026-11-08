@@ -1,0 +1,8 @@
+plugins {
+    id 'org.springframework.boot' version '4.1.2' apply false
+}
+
+allprojects {
+    group = 'com.businesslab'
+    version = '0.1.0-SNAPSHOT'
+}

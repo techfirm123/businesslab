@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: businesslab-api
+
+  datasource:
+    url: ${BUSINESSLAB_DB_URL:jdbc:postgresql://localhost:5432/businesslab}
+    username: ${BUSINESSLAB_DB_USERNAME:businesslab}
+    password: ${BUSINESSLAB_DB_PASSWORD:businesslab-local-only}
+    driver-class-name: org.postgresql.Driver
+
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 3000
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+info:
+  app:
+    name: BusinessLab API
+    description: Interactive business simulation platform
+    version: 0.1.0-SNAPSHOT
