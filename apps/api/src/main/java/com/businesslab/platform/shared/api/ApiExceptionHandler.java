@@ -2,6 +2,7 @@
 package com.businesslab.platform.shared.api;
 
 import com.businesslab.business.application.BusinessConfigurationValidationException;
+import com.businesslab.identity.application.EmailAlreadyRegisteredException;
 import com.businesslab.platform.shared.application.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -93,6 +94,20 @@ public class ApiExceptionHandler {
             "BUSINESS_CONFIGURATION_INVALID",
             exception.getMessage(),
             details,
+            request
+        );
+    }
+
+    @ExceptionHandler(EmailAlreadyRegisteredException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailAlreadyRegistered(
+        EmailAlreadyRegisteredException exception,
+        HttpServletRequest request
+    ) {
+        return build(
+            HttpStatus.CONFLICT,
+            "EMAIL_ALREADY_REGISTERED",
+            exception.getMessage(),
+            List.of(),
             request
         );
     }
