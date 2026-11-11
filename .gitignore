@@ -1,3 +1,4 @@
+
 # Java
 *.class
 *.jar
@@ -5,6 +6,10 @@
 *.ear
 hs_err_pid*
 replay_pid*
+
+# Gradle Wrapper
+# The wrapper JAR must be committed for CI wrapper validation.
+!gradle/wrapper/gradle-wrapper.jar
 
 # Gradle
 .gradle/
