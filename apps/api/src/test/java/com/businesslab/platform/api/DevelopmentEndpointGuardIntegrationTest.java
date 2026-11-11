@@ -1,4 +1,3 @@
-
 package com.businesslab.platform.api;
 
 import org.junit.jupiter.api.Test;
@@ -8,13 +7,13 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import java.util.UUID;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = {
-    "businesslab.api.development-endpoints-enabled=false"
-})
+@SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class DevelopmentEndpointGuardIntegrationTest {
@@ -27,21 +26,42 @@ class DevelopmentEndpointGuardIntegrationTest {
     }
 
     @Test
-    void shouldRegisterWorkspaceEndpointsAndRequireAuthentication()
+    void shouldRequireAuthenticationForWorkspaceEndpoints()
         throws Exception {
 
         mockMvc.perform(get("/api/v1/workspaces"))
-            .andExpect(status().isUnauthorized());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code")
+                .value("AUTHENTICATION_REQUIRED"));
     }
 
     @Test
-    void shouldKeepBusinessDevelopmentEndpointsDisabled()
+    void shouldRequireAuthenticationForBusinessDetailEndpoint()
         throws Exception {
 
         mockMvc.perform(
-                get("/api/v1/businesses/{businessId}", java.util.UUID.randomUUID())
-                    .with(user("development-test@example.com"))
+                get(
+                    "/api/v1/businesses/{businessId}",
+                    UUID.randomUUID()
+                )
             )
-            .andExpect(status().isNotFound());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code")
+                .value("AUTHENTICATION_REQUIRED"));
+    }
+
+    @Test
+    void shouldRequireAuthenticationForWorkspaceBusinessListing()
+        throws Exception {
+
+        mockMvc.perform(
+                get(
+                    "/api/v1/workspaces/{workspaceId}/businesses",
+                    UUID.randomUUID()
+                )
+            )
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code")
+                .value("AUTHENTICATION_REQUIRED"));
     }
 }
