@@ -34,6 +34,9 @@ dependencies {
     // Database migrations
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
 
+    // Password hashing primitives
+    implementation 'org.springframework.security:spring-security-crypto'
+
     // PostgreSQL
     runtimeOnly 'org.postgresql:postgresql'
     runtimeOnly 'org.flywaydb:flyway-database-postgresql'
