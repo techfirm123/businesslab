@@ -43,6 +43,16 @@ class FlywayMigrationIntegrationTest {
           )
         """;
 
+    private static final String SESSION_TABLE_COUNT_QUERY = """
+        SELECT COUNT(*)
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE UPPER(TABLE_SCHEMA) = 'PUBLIC'
+          AND UPPER(TABLE_NAME) IN (
+              'SPRING_SESSION',
+              'SPRING_SESSION_ATTRIBUTES'
+          )
+        """;
+
     private static final String COFFEE_SHOP_VERSION_COUNT_QUERY = """
         SELECT COUNT(*)
         FROM BUSINESS_TEMPLATE_VERSION
@@ -87,6 +97,18 @@ class FlywayMigrationIntegrationTest {
     void shouldCreateUserIdentityTables() {
         Integer tableCount = jdbcTemplate.queryForObject(
             IDENTITY_TABLE_COUNT_QUERY,
+            Integer.class
+        );
+
+        assertThat(tableCount)
+            .isNotNull()
+            .isEqualTo(2);
+    }
+
+    @Test
+    void shouldCreatePersistentSessionTables() {
+        Integer tableCount = jdbcTemplate.queryForObject(
+            SESSION_TABLE_COUNT_QUERY,
             Integer.class
         );
 

@@ -3,8 +3,8 @@ package com.businesslab.platform.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -15,7 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
     "businesslab.api.development-endpoints-enabled=false"
 })
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 class DevelopmentEndpointGuardIntegrationTest {
 
@@ -30,7 +30,9 @@ class DevelopmentEndpointGuardIntegrationTest {
     void shouldNotRegisterWorkspaceEndpointsWhenDevelopmentApiIsDisabled()
         throws Exception {
 
-        mockMvc.perform(get("/api/v1/workspaces/00000000-0000-0000-0000-000000000001"))
+        mockMvc.perform(
+                get("/api/v1/workspaces/00000000-0000-0000-0000-000000000001")
+            )
             .andExpect(status().isNotFound());
     }
 

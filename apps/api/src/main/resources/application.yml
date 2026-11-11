@@ -24,9 +24,28 @@ spring:
     baseline-on-migrate: false
     out-of-order: false
 
+  session:
+    timeout: 12h
+
+    jdbc:
+      initialize-schema: never
+      table-name: SPRING_SESSION
+
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
+
+  servlet:
+    session:
+      timeout: 12h
+      tracking-modes: cookie
+
+      cookie:
+        name: BUSINESSLAB_SESSION
+        http-only: true
+        secure: ${BUSINESSLAB_SESSION_COOKIE_SECURE:false}
+        same-site: lax
+        path: /
 
 management:
   endpoints:
@@ -48,6 +67,9 @@ info:
 
 businesslab:
   api:
-    # Workspace and business endpoints are development-only until
-    # authentication and authorization are implemented.
+    # Additional development-only controller registration guard.
     development-endpoints-enabled: ${BUSINESSLAB_DEV_API_ENABLED:false}
+
+  security:
+    # Comma-separated exact origins; credentials cannot use wildcard origins.
+    allowed-origins: ${BUSINESSLAB_CORS_ALLOWED_ORIGINS:http://localhost:3000}

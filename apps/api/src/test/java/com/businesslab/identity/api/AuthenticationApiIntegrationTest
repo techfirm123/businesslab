@@ -1,0 +1,389 @@
+
+package com.businesslab.identity.api;
+
+import com.businesslab.identity.application.UserRegistrationService;
+import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
+
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class AuthenticationApiIntegrationTest {
+
+    private static final String SESSION_COOKIE =
+        "BUSINESSLAB_SESSION";
+
+    private static final String VALID_PASSWORD =
+        "BusinessLab-Strong-2026";
+
+    private static final String USER_DISPLAY_NAME =
+        "BusinessLab Authentication Tester";
+
+    private final MockMvc mockMvc;
+    private final UserRegistrationService registrationService;
+    private final JdbcTemplate jdbcTemplate;
+    private final JsonMapper jsonMapper;
+
+    private final Set<String> createdEmails = new HashSet<>();
+    private final Set<String> createdSessionIds = new HashSet<>();
+
+    @Autowired
+    AuthenticationApiIntegrationTest(
+        MockMvc mockMvc,
+        UserRegistrationService registrationService,
+        JdbcTemplate jdbcTemplate,
+        JsonMapper jsonMapper
+    ) {
+        this.mockMvc = mockMvc;
+        this.registrationService = registrationService;
+        this.jdbcTemplate = jdbcTemplate;
+        this.jsonMapper = jsonMapper;
+    }
+
+    @AfterEach
+    void cleanUp() {
+        for (String sessionId : createdSessionIds) {
+            jdbcTemplate.update(
+                "DELETE FROM SPRING_SESSION WHERE SESSION_ID = ?",
+                sessionId
+            );
+        }
+
+        for (String email : createdEmails) {
+            jdbcTemplate.update(
+                "DELETE FROM app_user WHERE email = ?",
+                email
+            );
+        }
+
+        createdSessionIds.clear();
+        createdEmails.clear();
+    }
+
+    @Test
+    void shouldRejectAnonymousCurrentUserRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/me"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code")
+                .value("AUTHENTICATION_REQUIRED"));
+    }
+
+    @Test
+    void shouldRejectAnonymousWorkspaceAccess() throws Exception {
+        mockMvc.perform(
+                get(
+                    "/api/v1/workspaces/{workspaceId}",
+                    UUID.randomUUID()
+                )
+            )
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code")
+                .value("AUTHENTICATION_REQUIRED"));
+    }
+
+    @Test
+    void shouldKeepTemplateDiscoveryPublic() throws Exception {
+        mockMvc.perform(get("/api/v1/templates"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].templateId")
+                .value("coffee-shop"));
+    }
+
+    @Test
+    void shouldRejectLoginWithoutCsrfToken() throws Exception {
+        mockMvc.perform(
+                post("/api/v1/auth/login")
+                    .contentType(APPLICATION_JSON)
+                    .content("""
+                        {
+                          "email": "tester@example.com",
+                          "password": "BusinessLab-Strong-2026"
+                        }
+                        """)
+            )
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code")
+                .value("CSRF_VALIDATION_FAILED"));
+    }
+
+    @Test
+    void shouldRejectInvalidCredentials() throws Exception {
+        String email = registerTestUser();
+
+        CsrfSession csrfSession = obtainCsrfSession(null);
+
+        mockMvc.perform(
+                post("/api/v1/auth/login")
+                    .cookie(csrfSession.sessionCookie())
+                    .header(
+                        csrfSession.headerName(),
+                        csrfSession.token()
+                    )
+                    .contentType(APPLICATION_JSON)
+                    .content("""
+                        {
+                          "email": "%s",
+                          "password": "Wrong-Password-2026"
+                        }
+                        """.formatted(email))
+            )
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code")
+                .value("INVALID_CREDENTIALS"));
+    }
+
+    @Test
+    void shouldAuthenticateAndPersistSessionAcrossRequests()
+        throws Exception {
+
+        String email = registerTestUser();
+
+        CsrfSession preAuthenticationCsrf =
+            obtainCsrfSession(null);
+
+        MvcResult loginResult = mockMvc.perform(
+                post("/api/v1/auth/login")
+                    .cookie(preAuthenticationCsrf.sessionCookie())
+                    .header(
+                        preAuthenticationCsrf.headerName(),
+                        preAuthenticationCsrf.token()
+                    )
+                    .contentType(APPLICATION_JSON)
+                    .content("""
+                        {
+                          "email": "%s",
+                          "password": "%s"
+                        }
+                        """.formatted(email, VALID_PASSWORD))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.email").value(email))
+            .andExpect(jsonPath("$.displayName")
+                .value(USER_DISPLAY_NAME))
+            .andExpect(jsonPath("$.status").value("ACTIVE"))
+            .andReturn();
+
+        Cookie authenticatedCookie = loginResult
+            .getResponse()
+            .getCookie(SESSION_COOKIE);
+
+        assertThat(authenticatedCookie).isNotNull();
+        assertThat(authenticatedCookie.isHttpOnly()).isTrue();
+
+        createdSessionIds.add(authenticatedCookie.getValue());
+
+        // Successful authentication must rotate the session identifier.
+        assertThat(authenticatedCookie.getValue())
+            .isNotEqualTo(preAuthenticationCsrf.sessionCookie().getValue());
+
+        Integer persistedSessionCount = jdbcTemplate.queryForObject(
+            """
+            SELECT COUNT(*)
+            FROM SPRING_SESSION
+            WHERE SESSION_ID = ?
+            """,
+            Integer.class,
+            authenticatedCookie.getValue()
+        );
+
+        assertThat(persistedSessionCount).isEqualTo(1);
+
+        // The new server-side session must authenticate subsequent requests.
+        mockMvc.perform(
+                get("/api/v1/auth/me")
+                    .cookie(authenticatedCookie)
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.email").value(email))
+            .andExpect(jsonPath("$.displayName")
+                .value(USER_DISPLAY_NAME));
+    }
+
+    @Test
+    void shouldLogoutAndInvalidateAuthenticatedSession()
+        throws Exception {
+
+        String email = registerTestUser();
+
+        AuthenticatedSession authenticatedSession =
+            login(email);
+
+        /*
+         * Authentication invalidates the previous CSRF token.
+         * Obtain a fresh token before logout.
+         */
+        CsrfSession logoutCsrf = obtainCsrfSession(
+            authenticatedSession.sessionCookie()
+        );
+
+        mockMvc.perform(
+                post("/api/v1/auth/logout")
+                    .cookie(authenticatedSession.sessionCookie())
+                    .header(
+                        logoutCsrf.headerName(),
+                        logoutCsrf.token()
+                    )
+            )
+            .andExpect(status().isNoContent());
+
+        Integer remainingSessions = jdbcTemplate.queryForObject(
+            """
+            SELECT COUNT(*)
+            FROM SPRING_SESSION
+            WHERE SESSION_ID = ?
+            """,
+            Integer.class,
+            authenticatedSession.sessionCookie().getValue()
+        );
+
+        assertThat(remainingSessions).isZero();
+
+        // The invalidated cookie must no longer authenticate the user.
+        mockMvc.perform(
+                get("/api/v1/auth/me")
+                    .cookie(authenticatedSession.sessionCookie())
+            )
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code")
+                .value("AUTHENTICATION_REQUIRED"));
+    }
+
+    private String registerTestUser() {
+        String email = newTestEmail();
+
+        registrationService.register(
+            email,
+            USER_DISPLAY_NAME,
+            VALID_PASSWORD
+        );
+
+        createdEmails.add(email);
+
+        return email;
+    }
+
+    private AuthenticatedSession login(String email) throws Exception {
+        CsrfSession csrfSession = obtainCsrfSession(null);
+
+        MvcResult result = mockMvc.perform(
+                post("/api/v1/auth/login")
+                    .cookie(csrfSession.sessionCookie())
+                    .header(
+                        csrfSession.headerName(),
+                        csrfSession.token()
+                    )
+                    .contentType(APPLICATION_JSON)
+                    .content("""
+                        {
+                          "email": "%s",
+                          "password": "%s"
+                        }
+                        """.formatted(email, VALID_PASSWORD))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.email").value(email))
+            .andReturn();
+
+        Cookie authenticatedCookie = result
+            .getResponse()
+            .getCookie(SESSION_COOKIE);
+
+        assertThat(authenticatedCookie).isNotNull();
+
+        createdSessionIds.add(authenticatedCookie.getValue());
+
+        return new AuthenticatedSession(authenticatedCookie);
+    }
+
+    private CsrfSession obtainCsrfSession(
+        Cookie existingSessionCookie
+    ) throws Exception {
+
+        MockHttpServletRequestBuilder request =
+            get("/api/v1/auth/csrf");
+
+        if (existingSessionCookie != null) {
+            request.cookie(existingSessionCookie);
+        }
+
+        MvcResult result = mockMvc.perform(request)
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.token").isNotEmpty())
+            .andExpect(jsonPath("$.headerName")
+                .value("X-CSRF-TOKEN"))
+            .andReturn();
+
+        Cookie sessionCookie = result
+            .getResponse()
+            .getCookie(SESSION_COOKIE);
+
+        if (sessionCookie == null) {
+            sessionCookie = existingSessionCookie;
+        }
+
+        assertThat(sessionCookie).isNotNull();
+
+        createdSessionIds.add(sessionCookie.getValue());
+
+        Map<?, ?> response = jsonMapper
+            .readerFor(Map.class)
+            .with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+            .readValue(result.getResponse().getContentAsString());
+
+        String token = (String) response.get("token");
+        String headerName = (String) response.get("headerName");
+
+        assertThat(token).isNotBlank();
+        assertThat(headerName).isNotBlank();
+
+        return new CsrfSession(
+            token,
+            headerName,
+            sessionCookie
+        );
+    }
+
+    private String newTestEmail() {
+        return (
+            "bl015-auth-"
+                + UUID.randomUUID()
+                + "@example.com"
+        ).toLowerCase(Locale.ROOT);
+    }
+
+    private record CsrfSession(
+        String token,
+        String headerName,
+        Cookie sessionCookie
+    ) {
+    }
+
+    private record AuthenticatedSession(
+        Cookie sessionCookie
+    ) {
+    }
+}
