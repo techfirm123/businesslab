@@ -1,3 +1,4 @@
+
 package com.businesslab.platform.database;
 
 import org.junit.jupiter.api.Test;
@@ -13,11 +14,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FlywayMigrationIntegrationTest {
 
     private static final String HISTORY_TABLE_COUNT_QUERY = """
-            SELECT COUNT(*)
-            FROM INFORMATION_SCHEMA.TABLES
-            WHERE UPPER(TABLE_SCHEMA) = 'PUBLIC'
-              AND UPPER(TABLE_NAME) = 'FLYWAY_SCHEMA_HISTORY'
-            """;
+        SELECT COUNT(*)
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE UPPER(TABLE_SCHEMA) = 'PUBLIC'
+          AND UPPER(TABLE_NAME) = 'FLYWAY_SCHEMA_HISTORY'
+        """;
+
+    private static final String APPLICATION_TABLE_COUNT_QUERY = """
+        SELECT COUNT(*)
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE UPPER(TABLE_SCHEMA) = 'PUBLIC'
+          AND UPPER(TABLE_NAME) IN (
+              'WORKSPACE',
+              'BUSINESS_TEMPLATE',
+              'BUSINESS_TEMPLATE_VERSION',
+              'BUSINESS',
+              'BUSINESS_CONFIGURATION'
+          )
+        """;
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -36,6 +50,18 @@ class FlywayMigrationIntegrationTest {
         assertThat(tableCount)
             .isNotNull()
             .isEqualTo(1);
+    }
+
+    @Test
+    void shouldCreateGenericBusinessPersistenceTables() {
+        Integer tableCount = jdbcTemplate.queryForObject(
+            APPLICATION_TABLE_COUNT_QUERY,
+            Integer.class
+        );
+
+        assertThat(tableCount)
+            .isNotNull()
+            .isEqualTo(5);
     }
 
     @Test
