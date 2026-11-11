@@ -5,6 +5,7 @@ import com.businesslab.business.domain.Business;
 import com.businesslab.business.domain.BusinessConfiguration;
 import com.businesslab.business.domain.BusinessId;
 import com.businesslab.business.domain.BusinessTemplateReference;
+import com.businesslab.platform.shared.application.ResourceNotFoundException;
 import com.businesslab.templates.application.BusinessTemplateRegistry;
 import com.businesslab.templates.domain.BusinessTemplate;
 import com.businesslab.templates.domain.BusinessTemplateStatus;
@@ -27,11 +28,11 @@ import java.util.Objects;
  * Coordinates workspace and business creation.
  *
  * This service currently creates cloud-persisted workspaces only.
- * Browser-local workspaces will remain in the frontend's IndexedDB path.
+ * Browser-local workspaces remain in the frontend's IndexedDB path.
  *
  * Business creation currently supports registered code-backed templates.
- * Declarative templates are persisted as definitions but will become
- * executable only after the declarative interpreter and validator exist.
+ * Declarative templates will become usable after the declarative
+ * interpreter and validator have been implemented.
  */
 @Service
 public class BusinessApplicationService {
@@ -101,8 +102,9 @@ public class BusinessApplicationService {
         );
 
         Workspace workspace = workspaceRepository.findById(workspaceId)
-            .orElseThrow(() -> new IllegalArgumentException(
-                "Workspace not found: " + workspaceId
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "Workspace",
+                workspaceId.toString()
             ));
 
         return createBusinessInWorkspace(
@@ -181,9 +183,9 @@ public class BusinessApplicationService {
         }
 
         BusinessTemplate template = templateRegistry.find(templateReference)
-            .orElseThrow(() -> new IllegalArgumentException(
-                "Business template version not found: "
-                    + templateReference.templateId()
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "Business template version",
+                templateReference.templateId()
                     + "@"
                     + templateReference.version()
             ));
