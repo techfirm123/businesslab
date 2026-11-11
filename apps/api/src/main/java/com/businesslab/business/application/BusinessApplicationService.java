@@ -1,15 +1,16 @@
-
 package com.businesslab.business.application;
 
 import com.businesslab.business.domain.Business;
 import com.businesslab.business.domain.BusinessConfiguration;
 import com.businesslab.business.domain.BusinessId;
 import com.businesslab.business.domain.BusinessTemplateReference;
+import com.businesslab.identity.domain.UserId;
 import com.businesslab.platform.shared.application.ResourceNotFoundException;
 import com.businesslab.templates.application.BusinessTemplateRegistry;
 import com.businesslab.templates.domain.BusinessTemplate;
 import com.businesslab.templates.domain.BusinessTemplateStatus;
 import com.businesslab.templates.domain.BusinessTemplateValidationResult;
+import com.businesslab.workspace.application.WorkspaceAccessService;
 import com.businesslab.workspace.application.WorkspaceRepository;
 import com.businesslab.workspace.domain.Workspace;
 import com.businesslab.workspace.domain.WorkspaceId;
@@ -25,10 +26,11 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Coordinates workspace and business creation.
+ * Coordinates business creation within an existing workspace.
  *
- * This service currently creates cloud-persisted workspaces only.
- * Browser-local workspaces remain in the frontend's IndexedDB path.
+ * Every business creation operation is scoped to the authenticated
+ * user's active workspace membership. Workspace creation itself is
+ * owned by WorkspaceApplicationService.
  *
  * Business creation currently supports registered code-backed templates.
  * Declarative templates will become usable after the declarative
@@ -38,12 +40,14 @@ import java.util.Objects;
 public class BusinessApplicationService {
 
     private final WorkspaceRepository workspaceRepository;
+    private final WorkspaceAccessService workspaceAccessService;
     private final BusinessRepository businessRepository;
     private final BusinessTemplateRegistry templateRegistry;
     private final Clock clock;
 
     public BusinessApplicationService(
         WorkspaceRepository workspaceRepository,
+        WorkspaceAccessService workspaceAccessService,
         BusinessRepository businessRepository,
         BusinessTemplateRegistry templateRegistry,
         Clock clock
@@ -51,6 +55,10 @@ public class BusinessApplicationService {
         this.workspaceRepository = Objects.requireNonNull(
             workspaceRepository,
             "Workspace repository is required"
+        );
+        this.workspaceAccessService = Objects.requireNonNull(
+            workspaceAccessService,
+            "Workspace access service is required"
         );
         this.businessRepository = Objects.requireNonNull(
             businessRepository,
@@ -67,29 +75,14 @@ public class BusinessApplicationService {
     }
 
     /**
-     * Creates a new cloud workspace.
-     */
-    @Transactional
-    public Workspace createCloudWorkspace(String name) {
-        Instant now = currentInstant();
-
-        Workspace workspace = Workspace.create(
-            WorkspaceId.generate(),
-            name,
-            WorkspaceStorageMode.CLOUD,
-            now
-        );
-
-        workspaceRepository.save(workspace);
-
-        return workspace;
-    }
-
-    /**
      * Creates a business in an existing cloud workspace.
+     *
+     * The requesting user must have an active membership and a role
+     * that permits business creation.
      */
     @Transactional
     public Business createBusiness(
+        UserId requestingUserId,
         WorkspaceId workspaceId,
         BusinessTemplateReference templateReference,
         String name,
@@ -97,8 +90,21 @@ public class BusinessApplicationService {
         Map<String, ?> configurationValues
     ) {
         Objects.requireNonNull(
+            requestingUserId,
+            "Requesting user ID is required"
+        );
+        Objects.requireNonNull(
             workspaceId,
             "Workspace ID is required"
+        );
+
+        /*
+         * Authorize before loading the workspace. A user who does not
+         * belong to the workspace must not learn whether it exists.
+         */
+        workspaceAccessService.requireBusinessCreationAccess(
+            workspaceId,
+            requestingUserId
         );
 
         Workspace workspace = workspaceRepository.findById(workspaceId)
@@ -114,46 +120,6 @@ public class BusinessApplicationService {
             description,
             configurationValues,
             currentInstant()
-        );
-    }
-
-    /**
-     * Creates a cloud workspace and its first business atomically.
-     *
-     * If template resolution or configuration validation fails,
-     * the workspace insert is rolled back with the transaction.
-     */
-    @Transactional
-    public WorkspaceBusinessCreationResult createWorkspaceWithBusiness(
-        String workspaceName,
-        String businessName,
-        String businessDescription,
-        BusinessTemplateReference templateReference,
-        Map<String, ?> configurationValues
-    ) {
-        Instant now = currentInstant();
-
-        Workspace workspace = Workspace.create(
-            WorkspaceId.generate(),
-            workspaceName,
-            WorkspaceStorageMode.CLOUD,
-            now
-        );
-
-        workspaceRepository.save(workspace);
-
-        Business business = createBusinessInWorkspace(
-            workspace,
-            templateReference,
-            businessName,
-            businessDescription,
-            configurationValues,
-            now
-        );
-
-        return new WorkspaceBusinessCreationResult(
-            workspace,
-            business
         );
     }
 
