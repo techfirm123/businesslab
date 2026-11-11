@@ -5,6 +5,7 @@ import com.businesslab.business.application.BusinessConfigurationValidationExcep
 import com.businesslab.identity.application.EmailAlreadyRegisteredException;
 import com.businesslab.identity.application.InvalidCredentialsException;
 import com.businesslab.platform.shared.application.ResourceNotFoundException;
+import com.businesslab.workspace.application.WorkspacePermissionDeniedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -135,6 +136,20 @@ public class ApiExceptionHandler {
         return build(
             HttpStatus.NOT_FOUND,
             "RESOURCE_NOT_FOUND",
+            exception.getMessage(),
+            List.of(),
+            request
+        );
+    }
+
+    @ExceptionHandler(WorkspacePermissionDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleWorkspacePermissionDenied(
+        WorkspacePermissionDeniedException exception,
+        HttpServletRequest request
+    ) {
+        return build(
+            HttpStatus.FORBIDDEN,
+            "WORKSPACE_PERMISSION_DENIED",
             exception.getMessage(),
             List.of(),
             request

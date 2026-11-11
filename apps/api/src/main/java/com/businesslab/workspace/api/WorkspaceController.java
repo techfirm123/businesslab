@@ -1,14 +1,15 @@
 
 package com.businesslab.workspace.api;
 
-import com.businesslab.business.application.BusinessApplicationService;
+import com.businesslab.identity.application.CurrentUserService;
+import com.businesslab.identity.domain.User;
 import com.businesslab.workspace.api.dto.WorkspaceCreateRequest;
 import com.businesslab.workspace.api.dto.WorkspaceResponse;
-import com.businesslab.workspace.application.WorkspaceBusinessQueryService;
+import com.businesslab.workspace.application.WorkspaceApplicationService;
 import com.businesslab.workspace.domain.WorkspaceId;
 import jakarta.validation.Valid;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,58 +19,82 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Development-only workspace REST endpoints.
+ * Authenticated workspace REST endpoints.
  *
- * These endpoints are disabled by default. They must not be exposed
- * in a production deployment before authentication and workspace
- * ownership authorization are implemented.
+ * Workspace access is always scoped to the authenticated user's
+ * active membership.
  */
 @RestController
 @RequestMapping("/api/v1/workspaces")
 @Validated
-@ConditionalOnProperty(
-    prefix = "businesslab.api",
-    name = "development-endpoints-enabled",
-    havingValue = "true"
-)
 public class WorkspaceController {
 
-    private final BusinessApplicationService businessApplicationService;
-    private final WorkspaceBusinessQueryService queryService;
+    private final WorkspaceApplicationService workspaceApplicationService;
+    private final CurrentUserService currentUserService;
 
     public WorkspaceController(
-        BusinessApplicationService businessApplicationService,
-        WorkspaceBusinessQueryService queryService
+        WorkspaceApplicationService workspaceApplicationService,
+        CurrentUserService currentUserService
     ) {
-        this.businessApplicationService = businessApplicationService;
-        this.queryService = queryService;
+        this.workspaceApplicationService = workspaceApplicationService;
+        this.currentUserService = currentUserService;
     }
 
     @PostMapping
     public ResponseEntity<WorkspaceResponse> createWorkspace(
-        @Valid @RequestBody WorkspaceCreateRequest request
+        @Valid @RequestBody WorkspaceCreateRequest request,
+        Authentication authentication
     ) {
-        var workspace =
-            businessApplicationService.createCloudWorkspace(request.name());
+        User user = currentUserService.requireActiveUser(
+            authentication.getName()
+        );
 
-        WorkspaceResponse response = WorkspaceResponse.from(workspace);
+        var details =
+            workspaceApplicationService.createCloudWorkspace(
+                request.name(),
+                user.id()
+            );
+
+        WorkspaceResponse response =
+            WorkspaceResponse.from(details);
 
         return ResponseEntity
             .created(URI.create("/api/v1/workspaces/" + response.id()))
             .body(response);
     }
 
-    @GetMapping("/{workspaceId}")
-    public WorkspaceResponse getWorkspace(
-        @PathVariable UUID workspaceId
+    @GetMapping
+    public List<WorkspaceResponse> getWorkspaces(
+        Authentication authentication
     ) {
-        var workspace = queryService.getWorkspace(
-            new WorkspaceId(workspaceId)
+        User user = currentUserService.requireActiveUser(
+            authentication.getName()
         );
 
-        return WorkspaceResponse.from(workspace);
+        return workspaceApplicationService.getWorkspaces(user.id())
+            .stream()
+            .map(WorkspaceResponse::from)
+            .toList();
+    }
+
+    @GetMapping("/{workspaceId}")
+    public WorkspaceResponse getWorkspace(
+        @PathVariable UUID workspaceId,
+        Authentication authentication
+    ) {
+        User user = currentUserService.requireActiveUser(
+            authentication.getName()
+        );
+
+        var details = workspaceApplicationService.getWorkspace(
+            new WorkspaceId(workspaceId),
+            user.id()
+        );
+
+        return WorkspaceResponse.from(details);
     }
 }

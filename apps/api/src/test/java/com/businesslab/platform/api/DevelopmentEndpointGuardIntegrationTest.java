@@ -8,14 +8,14 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
     "businesslab.api.development-endpoints-enabled=false"
 })
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 class DevelopmentEndpointGuardIntegrationTest {
 
@@ -27,23 +27,20 @@ class DevelopmentEndpointGuardIntegrationTest {
     }
 
     @Test
-    void shouldNotRegisterWorkspaceEndpointsWhenDevelopmentApiIsDisabled()
+    void shouldRegisterWorkspaceEndpointsAndRequireAuthentication()
         throws Exception {
 
-        mockMvc.perform(
-                get("/api/v1/workspaces/00000000-0000-0000-0000-000000000001")
-            )
-            .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/workspaces"))
+            .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void shouldNotRegisterBusinessCreationEndpointWhenDevelopmentApiIsDisabled()
+    void shouldKeepBusinessDevelopmentEndpointsDisabled()
         throws Exception {
 
         mockMvc.perform(
-                post("/api/v1/workspaces/00000000-0000-0000-0000-000000000001/businesses")
-                    .contentType("application/json")
-                    .content("{}")
+                get("/api/v1/businesses/{businessId}", java.util.UUID.randomUUID())
+                    .with(user("development-test@example.com"))
             )
             .andExpect(status().isNotFound());
     }

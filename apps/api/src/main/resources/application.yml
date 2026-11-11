@@ -67,7 +67,8 @@ info:
 
 businesslab:
   api:
-    # Additional development-only controller registration guard.
+    # Legacy business REST endpoints remain development-only until
+    # business operations are fully integrated with membership authorization.
     development-endpoints-enabled: ${BUSINESSLAB_DEV_API_ENABLED:false}
 
   security:
