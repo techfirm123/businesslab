@@ -1,9 +1,9 @@
-
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import "./globals.css";
 import "./application.css";
+import "./application-workspace.css";
 
 export const metadata: Metadata = {
   title: {

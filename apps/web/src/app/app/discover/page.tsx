@@ -1,8 +1,9 @@
-
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useWorkspaces } from "@/features/workspaces/workspace-provider";
 import { ApiRequestError } from "@/lib/api/client";
 import { templateApi } from "@/lib/templates/template-api";
 import type {
@@ -21,11 +22,24 @@ function formatFieldType(type: string): string {
   return type.charAt(0) + type.slice(1).toLowerCase();
 }
 
+function createBusinessHref(template: BusinessTemplate): string {
+  const params = new URLSearchParams({
+    templateId: template.templateId,
+    version: template.version,
+  });
+
+  return `/app/create?${params.toString()}`;
+}
+
 function TemplateCard({
   template,
+  canCreate,
 }: {
   template: BusinessTemplate;
+  canCreate: boolean;
 }) {
+  const active = template.status === "ACTIVE";
+
   return (
     <article className="template-card">
       <div className="template-card-top">
@@ -73,6 +87,7 @@ function TemplateCard({
               <strong>{field.label}</strong>
               <span>{field.description}</span>
             </div>
+
             <small>{formatFieldType(field.type)}</small>
           </div>
         ))}
@@ -80,15 +95,32 @@ function TemplateCard({
 
       <div className="template-card-footer">
         <span>{template.capabilities.length} capabilities</span>
-        <button type="button" disabled>
-          Setup flow coming next
-        </button>
+
+        {active && canCreate ? (
+          <Link
+            href={createBusinessHref(template)}
+            className="bl-small-action"
+          >
+            Set up business <span aria-hidden="true">↗</span>
+          </Link>
+        ) : (
+          <span className="bl-disabled-action">
+            {!active
+              ? "Template unavailable"
+              : "Workspace access required"}
+          </span>
+        )}
       </div>
     </article>
   );
 }
 
 export default function DiscoverPage() {
+  const {
+    activeWorkspace,
+    loading: workspacesLoading,
+  } = useWorkspaces();
+
   const [templates, setTemplates] = useState<BusinessTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,12 +157,25 @@ export default function DiscoverPage() {
     };
   }, []);
 
+  const activeTemplates = templates.filter(
+    (template) => template.status === "ACTIVE",
+  );
+
+  const canCreate =
+    activeWorkspace !== null &&
+    activeWorkspace.membershipRole !== "VIEWER" &&
+    activeWorkspace.status === "ACTIVE";
+
   return (
     <div className="discover-page">
       <section className="discover-heading">
         <div>
-          <span className="overview-eyebrow">THE TEMPLATE LIBRARY</span>
+          <span className="overview-eyebrow">
+            THE TEMPLATE LIBRARY
+          </span>
+
           <h1>Discover what you can build.</h1>
+
           <p>
             Explore business models across industries. Each template
             gives you a starting point for a new virtual business.
@@ -139,12 +184,42 @@ export default function DiscoverPage() {
 
         <div className="discover-catalog-meta">
           <span>PLATFORM CATALOG</span>
+
           <strong>
-            {loading ? "—" : String(templates.length).padStart(2, "0")}
+            {loading ? "—" : String(activeTemplates.length).padStart(2, "0")}
           </strong>
-          <small>AVAILABLE TEMPLATES</small>
+
+          <small>ACTIVE TEMPLATES</small>
         </div>
       </section>
+
+      {!workspacesLoading && !activeWorkspace && (
+        <div className="bl-notice">
+          <div>
+            <strong>Create a workspace before starting a business.</strong>
+            <p>
+              Template discovery is available now. Business creation
+              requires an active workspace.
+            </p>
+          </div>
+
+          <Link href="/app" className="bl-secondary-button">
+            Set up workspace
+          </Link>
+        </div>
+      )}
+
+      {activeWorkspace && !canCreate && (
+        <div className="bl-notice">
+          <div>
+            <strong>Your current workspace is read-only.</strong>
+            <p>
+              Your {activeWorkspace.membershipRole} role can explore
+              templates but cannot create businesses.
+            </p>
+          </div>
+        </div>
+      )}
 
       {loading && (
         <div className="template-loading-grid">
@@ -157,6 +232,7 @@ export default function DiscoverPage() {
         <div className="template-error" role="alert">
           <strong>We couldn&apos;t load the template library.</strong>
           <p>{error}</p>
+
           <button
             type="button"
             onClick={() => window.location.reload()}
@@ -170,7 +246,9 @@ export default function DiscoverPage() {
         <div className="overview-empty-state">
           <div>
             <h3>No templates are currently available.</h3>
-            <p>Please check back as the BusinessLab catalog develops.</p>
+            <p>
+              Please check back as the BusinessLab catalog develops.
+            </p>
           </div>
         </div>
       )}
@@ -178,8 +256,8 @@ export default function DiscoverPage() {
       {!loading && !error && templates.length > 0 && (
         <>
           <div className="discover-results-heading">
-            <span>AVAILABLE BUSINESS MODELS</span>
-            <span>{templates.length} RESULTS</span>
+            <span>BUSINESS MODELS</span>
+            <span>{activeTemplates.length} ACTIVE RESULTS</span>
           </div>
 
           <div className="template-grid">
@@ -187,6 +265,7 @@ export default function DiscoverPage() {
               <TemplateCard
                 key={`${template.templateId}@${template.version}`}
                 template={template}
+                canCreate={canCreate}
               />
             ))}
           </div>

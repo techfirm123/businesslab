@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -7,6 +6,7 @@ import { useState, type ReactNode } from "react";
 
 import { useAuth } from "@/features/auth/auth-provider";
 import { AppIcon } from "@/components/application/app-icon";
+import { useWorkspaces } from "@/features/workspaces/workspace-provider";
 
 interface ApplicationShellProps {
   children: ReactNode;
@@ -19,6 +19,11 @@ const activeNavigation = [
     icon: "overview" as const,
   },
   {
+    href: "/app/businesses",
+    label: "My businesses",
+    icon: "business" as const,
+  },
+  {
     href: "/app/discover",
     label: "Discover",
     icon: "discover" as const,
@@ -26,7 +31,6 @@ const activeNavigation = [
 ];
 
 const upcomingNavigation = [
-  { label: "My businesses", icon: "business" as const },
   { label: "Experiment lab", icon: "experiment" as const },
   { label: "Flow studio", icon: "studio" as const },
 ];
@@ -34,6 +38,14 @@ const upcomingNavigation = [
 function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/app/discover")) {
     return "Discover businesses";
+  }
+
+  if (pathname.startsWith("/app/businesses")) {
+    return "My businesses";
+  }
+
+  if (pathname.startsWith("/app/create")) {
+    return "Create business";
   }
 
   return "Overview";
@@ -44,7 +56,15 @@ export function ApplicationShell({
 }: ApplicationShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+
   const { user, logout } = useAuth();
+
+  const {
+    workspaces,
+    activeWorkspace,
+    loading: workspacesLoading,
+    setActiveWorkspaceId,
+  } = useWorkspaces();
 
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -82,9 +102,49 @@ export function ApplicationShell({
           YOUR ENVIRONMENT
         </div>
 
-        <nav className="sidebar-navigation" aria-label="Application navigation">
+        <div className="sidebar-workspace-switcher">
+          <label htmlFor="active-workspace">
+            ACTIVE WORKSPACE
+          </label>
+
+          <select
+            id="active-workspace"
+            value={activeWorkspace?.id ?? ""}
+            disabled={workspacesLoading || workspaces.length === 0}
+            onChange={(event) => {
+              setActiveWorkspaceId(event.target.value);
+            }}
+          >
+            {workspaces.length === 0 && (
+              <option value="">
+                {workspacesLoading
+                  ? "Loading workspaces..."
+                  : "No workspace yet"}
+              </option>
+            )}
+
+            {workspaces.map((workspace) => (
+              <option key={workspace.id} value={workspace.id}>
+                {workspace.name}
+              </option>
+            ))}
+          </select>
+
+          {activeWorkspace && (
+            <span className="workspace-role-label">
+              {activeWorkspace.membershipRole}
+            </span>
+          )}
+        </div>
+
+        <nav
+          className="sidebar-navigation"
+          aria-label="Application navigation"
+        >
           <div className="sidebar-nav-group">
-            <span className="sidebar-section-label">WORKSPACE</span>
+            <span className="sidebar-section-label">
+              WORKSPACE
+            </span>
 
             {activeNavigation.map((item) => {
               const active =
@@ -101,14 +161,18 @@ export function ApplicationShell({
                 >
                   <AppIcon name={item.icon} />
                   <span>{item.label}</span>
-                  {active && <span className="nav-active-indicator" />}
+                  {active && (
+                    <span className="nav-active-indicator" />
+                  )}
                 </Link>
               );
             })}
           </div>
 
           <div className="sidebar-nav-group">
-            <span className="sidebar-section-label">COMING TO BUSINESSLAB</span>
+            <span className="sidebar-section-label">
+              COMING TO BUSINESSLAB
+            </span>
 
             {upcomingNavigation.map((item) => (
               <div
@@ -134,7 +198,9 @@ export function ApplicationShell({
             <p>
               Experiment with ideas. Understand what makes a business work.
             </p>
-            <span className="foundation-card-coordinate">BL / 001</span>
+            <span className="foundation-card-coordinate">
+              BL / 001
+            </span>
           </div>
 
           <div className="sidebar-account">
@@ -173,7 +239,9 @@ export function ApplicationShell({
                   <strong>{user?.displayName}</strong>
                   <span>{user?.email}</span>
                 </div>
+
                 <div className="account-menu-divider" />
+
                 <button
                   type="button"
                   onClick={handleLogout}

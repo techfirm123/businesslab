@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, type ReactNode } from "react";
@@ -9,6 +8,7 @@ import {
   useAuth,
 } from "@/features/auth/auth-provider";
 import { ApplicationShell } from "@/components/application/application-shell";
+import { WorkspaceProvider } from "@/features/workspaces/workspace-provider";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -60,7 +60,11 @@ function ProtectedApplication({
     );
   }
 
-  return <ApplicationShell>{children}</ApplicationShell>;
+  return (
+    <WorkspaceProvider>
+      <ApplicationShell>{children}</ApplicationShell>
+    </WorkspaceProvider>
+  );
 }
 
 export default function AppLayout({
