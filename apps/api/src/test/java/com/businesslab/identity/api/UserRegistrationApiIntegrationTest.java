@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -59,6 +60,7 @@ class UserRegistrationApiIntegrationTest {
 
         mockMvc.perform(
                 post("/api/v1/auth/register")
+                    .with(csrf())
                     .contentType(APPLICATION_JSON)
                     .content("""
                         {
@@ -104,6 +106,7 @@ class UserRegistrationApiIntegrationTest {
 
         mockMvc.perform(
                 post("/api/v1/auth/register")
+                    .with(csrf())
                     .contentType(APPLICATION_JSON)
                     .content("""
                         {
@@ -140,6 +143,7 @@ class UserRegistrationApiIntegrationTest {
 
         mockMvc.perform(
                 post("/api/v1/auth/register")
+                    .with(csrf())
                     .contentType(APPLICATION_JSON)
                     .content(requestBody)
             )
@@ -147,6 +151,7 @@ class UserRegistrationApiIntegrationTest {
 
         mockMvc.perform(
                 post("/api/v1/auth/register")
+                    .with(csrf())
                     .contentType(APPLICATION_JSON)
                     .content("""
                         {
@@ -154,7 +159,10 @@ class UserRegistrationApiIntegrationTest {
                           "displayName": "Duplicate Tester Again",
                           "password": "%s"
                         }
-                        """.formatted(email.toUpperCase(Locale.ROOT), VALID_PASSWORD))
+                        """.formatted(
+                        email.toUpperCase(Locale.ROOT),
+                        VALID_PASSWORD
+                    ))
             )
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.code")
@@ -167,6 +175,7 @@ class UserRegistrationApiIntegrationTest {
 
         mockMvc.perform(
                 post("/api/v1/auth/register")
+                    .with(csrf())
                     .contentType(APPLICATION_JSON)
                     .content("""
                         {
@@ -190,6 +199,7 @@ class UserRegistrationApiIntegrationTest {
 
         mockMvc.perform(
                 post("/api/v1/auth/register")
+                    .with(csrf())
                     .contentType(APPLICATION_JSON)
                     .content("""
                         {
@@ -216,6 +226,7 @@ class UserRegistrationApiIntegrationTest {
     void shouldRejectInvalidEmailAddress() throws Exception {
         mockMvc.perform(
                 post("/api/v1/auth/register")
+                    .with(csrf())
                     .contentType(APPLICATION_JSON)
                     .content("""
                         {

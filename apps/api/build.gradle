@@ -34,8 +34,11 @@ dependencies {
     // Database migrations
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
 
-    // Password hashing primitives
-    implementation 'org.springframework.security:spring-security-crypto'
+    // Authentication and authorization
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // Persistent JDBC-backed HTTP sessions
+    implementation 'org.springframework.boot:spring-boot-starter-session-jdbc'
 
     // PostgreSQL
     runtimeOnly 'org.postgresql:postgresql'
@@ -44,6 +47,7 @@ dependencies {
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.security:spring-security-test'
 
     // In-memory database for tests
     testRuntimeOnly 'com.h2database:h2'

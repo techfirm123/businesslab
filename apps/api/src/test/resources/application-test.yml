@@ -19,7 +19,18 @@ spring:
     validate-on-migrate: true
     clean-disabled: true
 
+  session:
+    timeout: 12h
+
+    jdbc:
+      initialize-schema: never
+      table-name: SPRING_SESSION
+
 management:
   health:
     db:
       enabled: false
+
+businesslab:
+  security:
+    allowed-origins: http://localhost:3000
