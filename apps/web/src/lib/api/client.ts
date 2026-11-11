@@ -1,4 +1,3 @@
-
 const API_BASE_URL = (
   process.env.NEXT_PUBLIC_BUSINESSLAB_API_URL ??
   "http://localhost:8080"
@@ -16,6 +15,12 @@ export interface ApiErrorPayload {
     code?: string;
     message?: string;
   }>;
+}
+
+interface CsrfTokenResponse {
+  token: string;
+  headerName: string;
+  parameterName: string;
 }
 
 export class ApiRequestError extends Error {
@@ -99,4 +104,31 @@ export async function apiRequest<T>(
   }
 
   return body as T;
+}
+
+/**
+ * Sends a JSON POST request using a fresh backend-issued CSRF token.
+ *
+ * Session cookies are sent by apiRequest. The token itself is not
+ * persisted in browser storage.
+ */
+export async function apiPostWithCsrf<T>(
+  path: string,
+  body: unknown,
+): Promise<T> {
+  const csrf = await apiRequest<CsrfTokenResponse>(
+    "/api/v1/auth/csrf",
+    {
+      method: "GET",
+    },
+  );
+
+  const headers = new Headers();
+  headers.set(csrf.headerName, csrf.token);
+
+  return apiRequest<T>(path, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
 }
