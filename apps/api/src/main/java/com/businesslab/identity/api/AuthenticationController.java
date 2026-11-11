@@ -3,9 +3,8 @@ package com.businesslab.identity.api;
 
 import com.businesslab.identity.api.dto.LoginRequest;
 import com.businesslab.identity.api.dto.UserRegistrationResponse;
+import com.businesslab.identity.application.CurrentUserService;
 import com.businesslab.identity.application.InvalidCredentialsException;
-import com.businesslab.identity.application.UserRepository;
-import com.businesslab.identity.domain.EmailAddress;
 import com.businesslab.identity.domain.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -36,13 +35,13 @@ public class AuthenticationController {
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContextRepository;
     private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     public AuthenticationController(
         AuthenticationManager authenticationManager,
         SecurityContextRepository securityContextRepository,
         SessionAuthenticationStrategy sessionAuthenticationStrategy,
-        UserRepository userRepository
+        CurrentUserService currentUserService
     ) {
         this.authenticationManager = Objects.requireNonNull(
             authenticationManager,
@@ -56,9 +55,9 @@ public class AuthenticationController {
             sessionAuthenticationStrategy,
             "Session authentication strategy is required"
         );
-        this.userRepository = Objects.requireNonNull(
-            userRepository,
-            "User repository is required"
+        this.currentUserService = Objects.requireNonNull(
+            currentUserService,
+            "Current user service is required"
         );
     }
 
@@ -78,7 +77,9 @@ public class AuthenticationController {
         try {
             authentication = authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken.unauthenticated(
-                    EmailAddress.of(request.email()).value(),
+                    com.businesslab.identity.domain.EmailAddress
+                        .of(request.email())
+                        .value(),
                     request.password()
                 )
             );
@@ -114,23 +115,20 @@ public class AuthenticationController {
             servletResponse
         );
 
-        return findAuthenticatedUser(authentication.getName());
+        User user = currentUserService.requireActiveUser(
+            authentication.getName()
+        );
+
+        return UserRegistrationResponse.from(user);
     }
 
     @GetMapping("/me")
     public UserRegistrationResponse currentUser(
         Authentication authentication
     ) {
-        return findAuthenticatedUser(authentication.getName());
-    }
-
-    private UserRegistrationResponse findAuthenticatedUser(
-        String authenticatedEmail
-    ) {
-        User user = userRepository.findByEmail(
-                EmailAddress.of(authenticatedEmail)
-            )
-            .orElseThrow(() -> new InvalidCredentialsException());
+        User user = currentUserService.requireActiveUser(
+            authentication.getName()
+        );
 
         return UserRegistrationResponse.from(user);
     }

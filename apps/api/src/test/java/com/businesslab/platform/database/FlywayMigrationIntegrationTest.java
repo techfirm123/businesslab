@@ -53,6 +53,13 @@ class FlywayMigrationIntegrationTest {
           )
         """;
 
+    private static final String MEMBERSHIP_TABLE_COUNT_QUERY = """
+        SELECT COUNT(*)
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE UPPER(TABLE_SCHEMA) = 'PUBLIC'
+          AND UPPER(TABLE_NAME) = 'WORKSPACE_MEMBERSHIP'
+        """;
+
     private static final String COFFEE_SHOP_VERSION_COUNT_QUERY = """
         SELECT COUNT(*)
         FROM BUSINESS_TEMPLATE_VERSION
@@ -115,6 +122,18 @@ class FlywayMigrationIntegrationTest {
         assertThat(tableCount)
             .isNotNull()
             .isEqualTo(2);
+    }
+
+    @Test
+    void shouldCreateWorkspaceMembershipTable() {
+        Integer tableCount = jdbcTemplate.queryForObject(
+            MEMBERSHIP_TABLE_COUNT_QUERY,
+            Integer.class
+        );
+
+        assertThat(tableCount)
+            .isNotNull()
+            .isEqualTo(1);
     }
 
     @Test
