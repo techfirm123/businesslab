@@ -1,3 +1,4 @@
+
 spring:
   application:
     name: businesslab-api
@@ -44,3 +45,9 @@ info:
     name: BusinessLab API
     description: Interactive business simulation platform
     version: 0.1.0-SNAPSHOT
+
+businesslab:
+  api:
+    # Workspace and business endpoints are development-only until
+    # authentication and authorization are implemented.
+    development-endpoints-enabled: ${BUSINESSLAB_DEV_API_ENABLED:false}

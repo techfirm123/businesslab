@@ -3,6 +3,7 @@ package com.businesslab.business.application;
 
 import com.businesslab.business.domain.Business;
 import com.businesslab.business.domain.BusinessTemplateReference;
+import com.businesslab.platform.shared.application.ResourceNotFoundException;
 import com.businesslab.templates.domain.BusinessTemplateValidationError;
 import com.businesslab.workspace.application.WorkspaceRepository;
 import com.businesslab.workspace.domain.Workspace;
@@ -174,7 +175,7 @@ class BusinessPersistenceIntegrationTest {
                 Map.of()
             )
         )
-            .isInstanceOf(IllegalArgumentException.class)
+            .isInstanceOf(ResourceNotFoundException.class)
             .hasMessageContaining("Business template version not found");
 
         assertThat(countWorkspaces())
