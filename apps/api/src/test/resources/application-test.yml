@@ -1,3 +1,4 @@
+
 spring:
   datasource:
     url: jdbc:h2:mem:businesslab_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
@@ -11,6 +12,12 @@ spring:
   sql:
     init:
       mode: never
+
+  flyway:
+    enabled: true
+    locations: classpath:db/test-migration
+    validate-on-migrate: true
+    clean-disabled: true
 
 management:
   health:

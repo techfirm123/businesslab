@@ -1,6 +1,8 @@
+
 # Database Migrations
 
-This directory contains version-controlled Flyway SQL migrations.
+This directory contains version-controlled Flyway SQL migrations
+for the PostgreSQL application database.
 
 ## Naming convention
 
@@ -24,9 +26,34 @@ R__description.sql
 6. Do not perform manual schema changes outside migrations.
 7. Avoid placing business-specific schema in platform-only migrations.
 
-The directory is intentionally starting without a versioned migration.
+## First application migration
 
-Flyway will create its schema history table during initialization.
+V1__create_business_persistence.sql establishes:
 
-The first actual application-domain migration will be introduced
-with the Generic Business Foundation implementation.
+- Cloud workspace persistence.
+- Business template identity and version records.
+- Code-backed and declarative template source types.
+- Template visibility and governance lifecycle metadata.
+- Generic business records.
+- JSONB business configuration.
+- The initial Coffee Shop code-backed template version.
+
+The Coffee Shop Java implementation remains authoritative for
+code-backed template behavior.
+
+Declarative definitions are stored as structured data and must
+be validated and interpreted only by approved platform capabilities.
+They must never be executed as arbitrary source code.
+
+## Test database
+
+The test profile uses H2 with a structurally equivalent schema under:
+
+src/test/resources/db/test-migration
+
+The H2 migration exists to support fast automated tests without
+Docker or an external PostgreSQL service.
+
+It is not a substitute for validating the PostgreSQL migration.
+The application must also be started against a clean PostgreSQL
+database before this slice is considered complete.
