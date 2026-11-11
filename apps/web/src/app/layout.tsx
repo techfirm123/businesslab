@@ -1,5 +1,9 @@
+
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
+
 import "./globals.css";
+import "./application.css";
 
 export const metadata: Metadata = {
   title: {
@@ -11,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 interface RootLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export default function RootLayout({
