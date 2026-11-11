@@ -1,3 +1,4 @@
+
 package com.businesslab.business.domain;
 
 import com.businesslab.workspace.domain.WorkspaceId;
@@ -8,38 +9,25 @@ import java.util.Objects;
 /**
  * Generic Business aggregate root.
  *
- * A Business represents an individual virtual business
- * within a workspace.
+ * A Business represents an individual virtual business within a workspace.
+ * Industry-specific behaviour is delegated to the registered template.
  *
- * Industry-specific behaviour is delegated to the
- * registered Business Template implementation.
- *
- * Business instances are immutable. Domain operations
- * return updated instances rather than modifying state
- * in place.
+ * Business instances are immutable. Domain operations return updated
+ * instances rather than modifying state in place.
  */
 public final class Business {
 
     private static final int MAX_NAME_LENGTH = 120;
-
     private static final int MAX_DESCRIPTION_LENGTH = 1000;
 
     private final BusinessId id;
-
     private final WorkspaceId workspaceId;
-
     private final BusinessTemplateReference templateReference;
-
     private final String name;
-
     private final String description;
-
     private final BusinessConfiguration configuration;
-
     private final BusinessStatus status;
-
     private final Instant createdAt;
-
     private final Instant updatedAt;
 
     private Business(
@@ -53,39 +41,29 @@ public final class Business {
         Instant createdAt,
         Instant updatedAt
     ) {
-        this.id = Objects.requireNonNull(
-            id,
-            "Business ID is required"
-        );
-
+        this.id = Objects.requireNonNull(id, "Business ID is required");
         this.workspaceId = Objects.requireNonNull(
             workspaceId,
             "Workspace ID is required"
         );
-
         this.templateReference = Objects.requireNonNull(
             templateReference,
             "Business template reference is required"
         );
-
         this.name = validateName(name);
         this.description = normalizeDescription(description);
-
         this.configuration = Objects.requireNonNull(
             configuration,
             "Business configuration is required"
         );
-
         this.status = Objects.requireNonNull(
             status,
             "Business status is required"
         );
-
         this.createdAt = Objects.requireNonNull(
             createdAt,
             "Business creation timestamp is required"
         );
-
         this.updatedAt = Objects.requireNonNull(
             updatedAt,
             "Business update timestamp is required"
@@ -116,6 +94,36 @@ public final class Business {
             BusinessStatus.DRAFT,
             createdAt,
             createdAt
+        );
+    }
+
+    /**
+     * Reconstitutes a previously persisted business.
+     *
+     * This method is intended for persistence adapters. It preserves the
+     * stored lifecycle state and timestamps instead of replaying transitions.
+     */
+    public static Business reconstitute(
+        BusinessId id,
+        WorkspaceId workspaceId,
+        BusinessTemplateReference templateReference,
+        String name,
+        String description,
+        BusinessConfiguration configuration,
+        BusinessStatus status,
+        Instant createdAt,
+        Instant updatedAt
+    ) {
+        return new Business(
+            id,
+            workspaceId,
+            templateReference,
+            name,
+            description,
+            configuration,
+            status,
+            createdAt,
+            updatedAt
         );
     }
 
@@ -203,10 +211,7 @@ public final class Business {
         );
     }
 
-    public Business rename(
-        String newName,
-        Instant updatedAt
-    ) {
+    public Business rename(String newName, Instant updatedAt) {
         ensureEditable();
 
         return copy(

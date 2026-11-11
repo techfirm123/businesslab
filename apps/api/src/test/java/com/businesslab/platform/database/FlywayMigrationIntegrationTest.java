@@ -33,6 +33,15 @@ class FlywayMigrationIntegrationTest {
           )
         """;
 
+    private static final String COFFEE_SHOP_VERSION_COUNT_QUERY = """
+        SELECT COUNT(*)
+        FROM BUSINESS_TEMPLATE_VERSION
+        WHERE TEMPLATE_ID = 'coffee-shop'
+          AND VERSION = '1.0.0'
+          AND SOURCE_TYPE = 'CODE_BACKED'
+          AND LIFECYCLE_STATUS = 'PUBLISHED'
+        """;
+
     private final JdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -62,6 +71,18 @@ class FlywayMigrationIntegrationTest {
         assertThat(tableCount)
             .isNotNull()
             .isEqualTo(5);
+    }
+
+    @Test
+    void shouldSeedTheExactCoffeeShopTemplateVersion() {
+        Integer versionCount = jdbcTemplate.queryForObject(
+            COFFEE_SHOP_VERSION_COUNT_QUERY,
+            Integer.class
+        );
+
+        assertThat(versionCount)
+            .isNotNull()
+            .isEqualTo(1);
     }
 
     @Test

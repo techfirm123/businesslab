@@ -1,15 +1,16 @@
+
 package com.businesslab.workspace.domain;
 
 import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Aggregate root representing a user's BusinessLab workspace.
+ * Aggregate root representing a BusinessLab workspace.
  *
- * A workspace is the organisational and persistence boundary
- * for one or more virtual businesses.
+ * A workspace is the organisational and persistence boundary for
+ * one or more virtual businesses.
  *
- * Ownership and membership are deliberately excluded until
+ * Ownership and membership remain outside this aggregate until
  * the platform identity foundation is implemented.
  */
 public final class Workspace {
@@ -17,15 +18,10 @@ public final class Workspace {
     private static final int MAX_NAME_LENGTH = 100;
 
     private final WorkspaceId id;
-
     private final String name;
-
     private final WorkspaceStorageMode storageMode;
-
     private final WorkspaceStatus status;
-
     private final Instant createdAt;
-
     private final Instant updatedAt;
 
     private Workspace(
@@ -36,24 +32,23 @@ public final class Workspace {
         Instant createdAt,
         Instant updatedAt
     ) {
-        this.id = Objects.requireNonNull(id, "Workspace ID is required");
+        this.id = Objects.requireNonNull(
+            id,
+            "Workspace ID is required"
+        );
         this.name = validateName(name);
-
         this.storageMode = Objects.requireNonNull(
             storageMode,
             "Workspace storage mode is required"
         );
-
         this.status = Objects.requireNonNull(
             status,
             "Workspace status is required"
         );
-
         this.createdAt = Objects.requireNonNull(
             createdAt,
             "Creation timestamp is required"
         );
-
         this.updatedAt = Objects.requireNonNull(
             updatedAt,
             "Update timestamp is required"
@@ -78,6 +73,27 @@ public final class Workspace {
         );
     }
 
+    /**
+     * Reconstitutes a previously persisted workspace.
+     */
+    public static Workspace reconstitute(
+        WorkspaceId id,
+        String name,
+        WorkspaceStorageMode storageMode,
+        WorkspaceStatus status,
+        Instant createdAt,
+        Instant updatedAt
+    ) {
+        return new Workspace(
+            id,
+            name,
+            storageMode,
+            status,
+            createdAt,
+            updatedAt
+        );
+    }
+
     public Workspace rename(String newName, Instant updatedAt) {
         ensureActive();
 
@@ -94,8 +110,8 @@ public final class Workspace {
     /**
      * Promotes a local workspace to cloud persistence.
      *
-     * This operation must only be invoked by an application
-     * service after successful data migration and verification.
+     * This operation must only be invoked by an application service
+     * after successful data migration and verification.
      */
     public Workspace promoteToCloud(Instant updatedAt) {
         ensureActive();
