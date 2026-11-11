@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 
 const capabilities = [
@@ -82,9 +83,13 @@ export default function Home() {
           <a href="#principles">Our approach</a>
         </nav>
 
-        <div className="platform-status">
-          <span className="status-dot" />
-          <span>Building the foundation</span>
+        <div className="public-auth-links">
+          <Link className="public-login-link" href="/login">
+            Sign in
+          </Link>
+          <Link className="public-register-link" href="/register">
+            Get started <span aria-hidden="true">↗</span>
+          </Link>
         </div>
       </header>
 
@@ -102,20 +107,21 @@ export default function Home() {
           </h1>
 
           <p className="hero-description">
-            What if you could start a business, make decisions, experience
-            the consequences and try again — without risking real money?
+            What if you could start a business, make decisions,
+            experience the consequences and try again — without
+            risking real money?
           </p>
 
           <p className="hero-supporting">
-            Welcome to a world where business ideas become experiences
-            and decisions become experiments.
+            Welcome to a world where business ideas become
+            experiences and decisions become experiments.
           </p>
 
           <div className="hero-actions">
-            <a className="primary-link" href="#platform">
-              Explore BusinessLab
+            <Link className="primary-link" href="/register">
+              Start building on BusinessLab
               <span aria-hidden="true">↗</span>
-            </a>
+            </Link>
 
             <span className="hero-note">
               Start with an idea. Learn by doing.
@@ -234,9 +240,9 @@ export default function Home() {
           </h2>
 
           <p>
-            BusinessLab should be accessible to someone exploring their
-            first business idea and powerful enough for someone who wants
-            to investigate complex business decisions.
+            BusinessLab should be accessible to someone exploring
+            their first business idea and powerful enough for someone
+            who wants to investigate complex business decisions.
           </p>
         </div>
 
@@ -268,9 +274,13 @@ export default function Home() {
         </h2>
 
         <p>
-          We&apos;re building the foundations for a new way to explore
-          entrepreneurship, business operations and decision-making.
+          Explore entrepreneurship, business operations and
+          decision-making in an environment built for experimentation.
         </p>
+
+        <Link className="launch-register-link" href="/register">
+          Create your BusinessLab account <span aria-hidden="true">↗</span>
+        </Link>
 
         <span className="launch-status">
           <span className="status-dot" />
